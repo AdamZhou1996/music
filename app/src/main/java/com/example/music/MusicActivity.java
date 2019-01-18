@@ -11,9 +11,13 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.StrictMode;
 import android.support.v4.app.ActivityCompat;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.util.IntProperty;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.SeekBar;
@@ -31,7 +35,7 @@ import java.util.TimerTask;
 public class MusicActivity extends Activity {
 
 
-    private static final int INTERNAL_TIME = 1000;
+    private static final int INTERNAL_TIME = 500;
     final MediaPlayer mp = new MediaPlayer();
     String song_path = "";
     private SeekBar seekBar;
@@ -43,6 +47,8 @@ public class MusicActivity extends Activity {
     private Timer timer;
     private ArrayList<String> list;
     private File[] songFiles;
+    private Button mode;
+    private int playmode = 0;
 
     private Handler mHandler = new Handler(new Handler.Callback() {
         @Override
@@ -75,6 +81,25 @@ public class MusicActivity extends Activity {
         currentTV = findViewById(R.id.music_current_time);
         seekBar = (SeekBar) findViewById(R.id.music_seekbar);
         seekBar.setOnSeekBarChangeListener(new MySeekBar());
+        mode = (Button)findViewById(R.id.btn_mode);
+        mode.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                if(playmode==0)
+                {
+                    playmode = 1;
+                    mode.setText("循环播放");
+                }
+                else if(playmode == 1)
+                {playmode = 2;mode.setText("随机播放");}
+                else
+                {playmode = 0;mode.setText("顺序播放");}
+            }
+        });
+
+
+
 
         if (ActivityCompat.checkSelfPermission(MusicActivity.this, Manifest.permission.READ_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -84,10 +109,10 @@ public class MusicActivity extends Activity {
         }
 
         //判断是否是AndroidN以及更高的版本 N=24
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        /*f (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             StrictMode.VmPolicy.Builder builder = new StrictMode.VmPolicy.Builder();
             StrictMode.setVmPolicy(builder.build());
-        }
+        }*/
 
         list = new ArrayList<String>();   //音乐列表
         File sdpath = Environment.getExternalStorageDirectory(); //获得手机SD卡路径
@@ -96,8 +121,8 @@ public class MusicActivity extends Activity {
         songFiles = path.listFiles(new MyFilter(".mp3"));
         for (File file : songFiles) {
             String str = file.getAbsolutePath();
-            String str1 = str.substring(str.indexOf("谭")+1,str.indexOf(".mp3"));
-            list.add(str1);//获取文件的绝对路径
+            String str1 = str.substring(str.indexOf("/Music/")+7,str.indexOf(".mp3"));
+            list.add(str1);
         }
 
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(MusicActivity.this,
@@ -139,6 +164,7 @@ public class MusicActivity extends Activity {
 
         //暂停和播放
         final ImageButton btnpause = (ImageButton) findViewById(R.id.btn_pause);
+        btnpause.setImageResource(android.R.drawable.ic_media_play);
         btnpause.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -170,7 +196,6 @@ public class MusicActivity extends Activity {
                 changeMusic(++currentposition);
             }
         });
-
 
     }
 
@@ -208,6 +233,17 @@ public class MusicActivity extends Activity {
         // 使用MediaPlayer获取当前播放时间除以总时间的进度
         int progress = mp.getCurrentPosition();
         msg.arg1 = progress;
+        double d = Math.random()*songFiles.length;
+        final int ran = (int)d;
+       mp.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+           @Override
+           public void onCompletion(MediaPlayer mp) {
+               mp.stop();
+               if(playmode==0){changeMusic(++currentposition);}
+               else if(playmode==1){changeMusic(currentposition);}
+               else if(playmode==2){changeMusic(currentposition=currentposition+ran);}
+           }
+       });
         mHandler.sendMessageDelayed(msg, INTERNAL_TIME);
     }
 
